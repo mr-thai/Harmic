@@ -1,6 +1,12 @@
 
+using Harmic.Models;
 using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext<HarmicContext>(options => {
+    options.UseSqlServer(builder.Configuration.GetConnectionString("HarmicContext"));
+    });
+
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
