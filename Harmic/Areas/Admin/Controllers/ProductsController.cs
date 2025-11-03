@@ -10,6 +10,7 @@ using Harmic.Models;
 namespace Harmic.Areas.Admin.Controllers
 {
     [Area("Admin")]
+
     public class ProductsController : Controller
     {
         private readonly HarmicContext _context;
