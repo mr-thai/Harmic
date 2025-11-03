@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Harmic.Models;
 
-namespace Harmic.Areas.Admin
+namespace Harmic.Areas.Admin.Controllers
 {
     [Area("Admin")]
     public class ProductsController : Controller
@@ -61,11 +61,13 @@ namespace Harmic.Areas.Admin
         {
             if (ModelState.IsValid)
             {
+                tbProduct.Alias = Harmic.Utilities.Function.TitleSlugGenerationAlias(tbProduct.Title);
                 _context.Add(tbProduct);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["CategoryProductId"] = new SelectList(_context.TbProductCategories, "CategoryProductId", "CategoryProductId", tbProduct.CategoryProductId);
+            ViewData["CategoryProductId"] = new 
+                SelectList(_context.TbProductCategories, "CategoryProductId", "CategoryProductId", tbProduct.CategoryProductId);
             return View(tbProduct);
         }
 
