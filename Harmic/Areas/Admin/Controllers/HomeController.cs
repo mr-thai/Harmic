@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Harmic.Utilities;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Harmic.Areas.Admin.Controllers
 {
@@ -7,7 +8,18 @@ namespace Harmic.Areas.Admin.Controllers
         [Area("Admin")]
         public IActionResult Index()
         {
+            if (!Function.IsLogin())
+            {
+                return RedirectToAction("Index", "Login");
+            }
             return View();
+        }
+        public IActionResult Logout()
+        {
+            Function._AccountId = 0;
+            Function._Username = string.Empty;
+            Function._Message = string.Empty;
+            return RedirectToAction("Index", "Login");
         }
     }
 }

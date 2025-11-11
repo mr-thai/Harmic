@@ -190,7 +190,15 @@
           <img src="~/Admin/dist/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
         </div>
         <div class="info">
-          <a href="#" class="d-block">Alexander Pierce</a>
+          <a href="#" class="d-block">@Harmic.Utilities.Function._Username</a>
+        </div>
+        <div class="info">
+            <form asp-area="Admin" asp-controller="Login" method="post" style="display:inline;">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-danger btn-sm">
+                <i class="fas fa-sign-out-alt"></i> (Logout)
+            </button>
+        </form>
         </div>
       </div>
 
