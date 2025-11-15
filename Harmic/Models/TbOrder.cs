@@ -9,6 +9,8 @@ public partial class TbOrder
 
     public string? Code { get; set; }
 
+    public int? AccountId { get; set; }
+
     public string? CustomerName { get; set; }
 
     public string? Phone { get; set; }
@@ -30,6 +32,6 @@ public partial class TbOrder
     public string? ModifiedBy { get; set; }
 
     public virtual TbOrderStatus? OrderStatus { get; set; }
-
+    public virtual TbAccount? Account { get; set; }
     public virtual ICollection<TbOrderDetail> TbOrderDetails { get; set; } = new List<TbOrderDetail>();
 }

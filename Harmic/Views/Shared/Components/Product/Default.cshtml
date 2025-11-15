@@ -12,8 +12,15 @@
                 <div class="product-add-action">
                     <ul>
                         <li>
-                            <a href="cart.html">
-                                <i class="pe-7s-cart"></i>
+                            <a >
+                                <form asp-controller="Cart" asp-action="Add" method="post" class="d-inline">
+                                    <input type="hidden" name="productId" value="@item.ProductId" />
+                                    <input type="hidden" name="quantity" value="1" />
+                                    <input type="hidden" name="returnUrl" value="@($"{Context.Request.Path}{Context.Request.QueryString}")" />
+                                    <button type="submit" class="btn btn-link p-0 m-0" title="Add to cart">
+                                        <i class="pe-7s-cart"></i>
+                                    </button>
+                                </form>
                             </a>
                         </li>
                         <li>
@@ -48,7 +55,6 @@
                         {
                             <li><i class="pe-7s-star"></i></li>
                         }
-                        
                     </ul>
                 </div>
             </div>

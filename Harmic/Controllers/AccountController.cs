@@ -1,5 +1,7 @@
 ﻿using Harmic.Models;
 using Harmic.Utilities;
+using Harmic.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Harmic.Controllers
@@ -7,9 +9,12 @@ namespace Harmic.Controllers
     public class AccountController : Controller
     {
         private readonly HarmicContext _context;
-        public AccountController(HarmicContext context)
+        private readonly ICartService _cartService;
+
+        public AccountController(HarmicContext context, ICartService cartService)
         {
             _context = context;
+            _cartService = cartService;
         }
 
         [HttpGet]
@@ -41,15 +46,17 @@ namespace Harmic.Controllers
                 Function._AccountId = user.AccountId;
                 Function._Username = user.Username ?? string.Empty;
                 Function._Message = user.Email ?? string.Empty;
+                HttpContext.Session.SetInt32("RoleId", user.RoleId ?? 0);
+
+                // Merge any session cart into this user cart
+                _cartService.MergeSessionCartToUserAsync(user.AccountId).GetAwaiter().GetResult();
 
                 if (user.RoleId == 1)
                 {
-                    // Admin: chuyển đến trang chủ admin
-                    return RedirectToAction("Index", "Home", new { area = "Admin" });
+                    return RedirectToAction("Index", "Home");
                 }
                 else
                 {
-                    // Người dùng thường: chuyển đến trang chủ
                     return RedirectToAction("Index", "Home");
                 }
             }
