@@ -1,5 +1,6 @@
 ﻿@using Microsoft.AspNetCore.Mvc
 @using Harmic.Services
+@using Microsoft.AspNetCore.Http
 
 @{
     string sUrl = "/Cart/index";
@@ -34,36 +35,41 @@
     <link rel="stylesheet" href="~/assets/css/plugins/magnific-popup.min.css" />
     <!-- CSS -->
     <style>
-        /* Nút chat hình tròn cố định */
         .chat-circle {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            width: 60px;
-            height: 60px;
-            background-color: #007bff;
+            width: 62px;
+            height: 62px;
+            background-color: rgb(186, 195, 78);
             color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 24px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            font-size: 26px;
+            box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+            transition: 0.2s ease;
             z-index: 9999;
         }
+
+            .chat-circle:hover {
+                background: #78c878;
+                transform: scale(1.06);
+            }
 
         /* Hộp chat */
         .chat-box {
             position: fixed;
-            bottom: 90px; /* trên nút chat */
+            bottom: 95px;
             right: 20px;
-            width: 300px;
-            max-height: 400px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            display: none; /* ẩn mặc định */
+            width: 420px;
+            max-height: 650px;
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+            display: none;
             flex-direction: column;
             overflow: hidden;
             z-index: 9999;
@@ -71,17 +77,25 @@
 
         /* Header chat */
         .chat-header {
-            background-color: #007bff;
+            background-color: rgb(186, 195, 78);
             color: white;
-            padding: 10px;
+            padding: 12px;
             font-weight: bold;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         /* Nội dung tin nhắn */
         .chat-messages {
             flex: 1;
-            padding: 10px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
             overflow-y: auto;
+            background: #f9f9f9;
         }
 
         /* Input chat */
@@ -99,7 +113,13 @@
         .chat-messages { display:flex; flex-direction:column; }
         .chat-input-wrap { display:flex; border-top:1px solid #ddd; }
         .chat-input-wrap input { flex:1; }
-        .chat-send-btn { border:none; background:#007bff; color:#fff; padding:0 14px; }
+
+        .chat-send-btn {
+            border: none;
+            background-color: rgb(186, 195, 78);
+            color: #fff;
+            padding: 0 14px;
+        }
         .chat-typing { font-size:12px; color:#888; padding:4px 2px; }
     </style>
     <!-- Style CSS -->
@@ -179,11 +199,11 @@
                                 <div class="header-right">
                                     <ul>
                                         <li class="dropdown d-none d-md-block">
-                                            <button class="btn btn-link dropdown-toggle ht-btn p-0" type="button" id="settingButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <button class="btn btn-link dropdown-toggle ht-btn p-0" type="button" id="settingButton"  data-bs-toggle="dropdown" aria-expanded="false">
                                                 <i class="pe-7s-users"></i>
                                             </button>
                                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="settingButton">
-                                                <li><a class="dropdown-item" href="my-account.html">My account</a></li>
+                                                <li><a class="dropdown-item" asp-area="" asp-controller="Account" asp-action="Index">Logout</a></li>
                                                 <li><a class="dropdown-item" href="login-register.html">Login | Register</a></li>
                                             </ul>
                                         </li>
@@ -225,8 +245,7 @@
                                         <ul>
                                             @{
                                                 bool isAdmin = false;
-
-                                                var roleId = Context.Session.GetInt32("RoleId");
+                                                var roleId = Context?.Session?.GetInt32("RoleId") ?? 0;
                                                 if (roleId == 1)
                                                 {
                                                     isAdmin = true;
@@ -333,7 +352,7 @@
                                                     <li>
                                                         <a href="shop.html">
                                                             <span class="mm-text">Shop Default</span>
-                                                        </a>
+                                                            </a>
                                                     </li>
                                                     <li>
                                                         <a href="shop-leftsidebar.html">
@@ -562,17 +581,17 @@
                             <h4 class="mb-0">Shopping Cart</h4>
                             <a href="#" class="button-close"><i class="pe-7s-close"></i></a>
                         </div>
-                        <ul class="minicart-list">
-                            @await Component.InvokeAsync("Cart")
+                        <ul class="minicart-list" id="minicart-list">
+                            @* Filled by JS *@
                         </ul>
                     </div>
                     <div class="minicart-item_total">
                         <span>Subtotal</span>
-                        <span class="ammount">$240.00</span>
+                        <span class="ammount" id="minicart-subtotal">$0</span>
                     </div>
                     <div class="group-btn_wrap d-grid gap-2">
-                        <a href="@sUrl" class="btn btn-secondary btn-primary-hover">View Cart</a>
-                        <a href="checkout.html" class="btn btn-secondary btn-primary-hover">Checkout</a>
+                        <a href="@Url.Action("Index","Cart")" class="btn btn-secondary btn-primary-hover">View Cart</a>
+                        <a href="@Url.Action("CreatePaymentUrl","VNplay", new { moneyToPay = 0D, description = "Order payment" })" class="btn btn-secondary btn-primary-hover">Checkout</a>
                     </div>
                 </div>
             </div>
@@ -823,9 +842,97 @@
     <!--Main JS (Common Activation Codes)-->
     <script src="~/assets/js/main.js"></script>
     <script src="~/assets/toastr/toastr.min.js"></script>
-	@* @await Component.InvokeAsync("Notification") *@
     @RenderSection("Scripts", required: false)
 
-</body>
+    <!-- Anti-forgery token cho các gọi AJAX toàn cục -->
+    <form id="af-token-form" style="display:none" method="post">
+        @Html.AntiForgeryToken()
+    </form>
 
+    <!-- Mini-cart realtime (render từ /Cart/MiniCart) -->
+    <script>
+        function formatMoney(n) { try { return '$' + (n ?? 0).toLocaleString(); } catch { return '$' + n; } }
+        function getAntiForgeryToken() {
+            const el = document.querySelector('#af-token-form input[name="__RequestVerificationToken"]')
+                   || document.querySelector('input[name="__RequestVerificationToken"]');
+            return el ? el.value : '';
+        }
+        function cartRenderMiniCart(data) {
+            const ul = document.getElementById('minicart-list');
+            if (!ul) return;
+            ul.innerHTML = '';
+            (data.items || []).forEach(it => {
+                const li = document.createElement('li');
+                li.className = 'minicart-product';
+                li.innerHTML = `
+                    <a class="product-item_remove" href="#" data-remove-id="${it.productId}" title="Remove">
+                        <i class="pe-7s-close"></i>
+                    </a>
+                    <a href="javascript:void(0)" class="product-item_img">
+                        <img class="img-full" src="${it.imageUrl}" alt="Product Image">
+                    </a>
+                    <div class="product-item_content">
+                        <a class="product-item_title" href="javascript:void(0)">${it.title}</a>
+                        <span class="product-item_quantity">${it.quantity} x ${formatMoney(it.price)}</span>
+                    </div>`;
+                ul.appendChild(li);
+            });
+
+            const subtotal = document.getElementById('minicart-subtotal');
+            if (subtotal) subtotal.textContent = formatMoney(data.subtotal || 0);
+
+            const qtySpan = document.querySelector('.minicart-wrap .quantity');
+            if (qtySpan) qtySpan.textContent = data.itemCount || 0;
+        }
+        async function cartReloadMiniCart() {
+            try {
+                const res = await fetch('@Url.Action("MiniCart","Cart")', { credentials: 'same-origin' });
+                if (!res.ok) return;
+                const data = await res.json();
+                cartRenderMiniCart(data);
+            } catch { /* noop */ }
+        }
+        async function cartPost(url, payload) {
+            const token = getAntiForgeryToken();
+            const body = new URLSearchParams({ __RequestVerificationToken: token, ...payload });
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                body
+            });
+            const data = await res.json().catch(() => ({}));
+            if (data && data.itemCount != null) {
+                const qtySpan = document.querySelector('.minicart-wrap .quantity');
+                if (qtySpan) qtySpan.textContent = data.itemCount;
+            }
+            document.dispatchEvent(new CustomEvent('cart:changed', { detail: data }));
+            return data;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            cartReloadMiniCart();
+        });
+        document.addEventListener('cart:changed', () => cartReloadMiniCart());
+
+        // Xóa item ngay trong mini-cart (delegate click)
+        document.addEventListener('click', async (e) => {
+            const a = e.target.closest('a.product-item_remove[data-remove-id]');
+            if (!a) return;
+            e.preventDefault();
+            const pid = a.getAttribute('data-remove-id');
+            if (!pid) return;
+            await cartPost('@Url.Action("RemoveAjax","Cart")', { productId: pid });
+        });
+
+        // Thêm sản phẩm vào giỏ hàng realtime (nút có data-add-cart)
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-add-cart][data-product-id]');
+            if (!btn) return;
+            e.preventDefault();
+            const pid = btn.getAttribute('data-product-id');
+            // Mặc định qty = 1, có thể mở rộng đọc từ input bên cạnh
+            await cartPost('@Url.Action("AddAjax","Cart")', { productId: pid, quantity: 1 });
+        });
+    </script>
+</body>
 </html>

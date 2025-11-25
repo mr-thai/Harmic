@@ -1,5 +1,4 @@
 ﻿@model IEnumerable<Harmic.Models.TbProduct>
-
 @foreach (var item in Model)
 {
 	string sUrl = $"/product/{item.Alias}-{item.ProductId}.html";
@@ -37,7 +36,7 @@
                 </div>
             </div>
             <div class="product-content">
-                <a class="product-name" href="@sUrl">@item.Title</a>
+                <a class="product-name" href="../@sUrl">@item.Title</a>
                 <div class="price-box pb-1">
                     @if (item.PriceSale == null)
                     {
@@ -51,7 +50,7 @@
                 </div>
                 <div class="rating-box">
                     <ul>
-                        @for (int i = 0 ; i <= item.Star ; i++)
+                        @for (int i = 1 ; i <= item.Star ; i++)
                         {
                             <li><i class="pe-7s-star"></i></li>
                         }

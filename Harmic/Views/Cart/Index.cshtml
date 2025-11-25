@@ -1,8 +1,10 @@
 ﻿@model Harmic.Models.TbOrder
+@using Harmic.Models
 @{
     ViewData["Title"] = "Index";
     Layout = "~/Views/Shared/_Layout.cshtml";
     decimal SubTotal() => Model?.TbOrderDetails?.Sum(d => (d.Price ?? 0m) * (d.Quantity ?? 0)) ?? 0m;
+    var productMap = ViewBag.ProductMap as IDictionary<int, TbProduct>;
 }
 <!-- Begin Main Content Area -->
 <main class="main-content">
@@ -47,35 +49,38 @@
                                         var unitPrice = item.Price ?? 0m;
                                         var qty = item.Quantity ?? 0;
                                         var lineTotal = unitPrice * qty;
+
+                                        TbProduct? p = null;
+                                        if (item.ProductId.HasValue && productMap != null)
+                                        {
+                                            productMap.TryGetValue(item.ProductId.Value, out p);
+                                        }
+                                        var img = Url.Content("~/" + (string.IsNullOrWhiteSpace(p?.Image) ? "assets/images/product/small-size/1-1-112x124.jpg" : p!.Image));
+                                        var title = p?.Title ?? $"Product #{item.ProductId}";
                                         <tr data-product-id="@item.ProductId">
                                             <td class="product_remove">
-                                                <form asp-controller="Cart" asp-action="Remove" method="post" class="d-inline">
-                                                    <input type="hidden" name="productId" value="@item.ProductId" />
-                                                    <button type="submit" class="btn btn-link p-0 m-0 align-baseline" title="Remove">
-                                                        <i class="pe-7s-close"></i>
-                                                    </button>
-                                                </form>
+                                                <button type="button" class="btn btn-link p-0 m-0 align-baseline js-remove" title="Remove" data-product-id="@item.ProductId">
+                                                    <i class="pe-7s-close"></i>
+                                                </button>
                                             </td>
                                             <td class="product-thumbnail">
                                                 <a href="javascript:void(0)">
-                                                    <img src="assets/images/product/small-size/1-1-112x124.jpg" alt="Cart Thumbnail" />
+                                                    <img src="@img" alt="Cart Thumbnail" />
                                                 </a>
                                             </td>
                                             <td class="product-name">
-                                                <a href="javascript:void(0)">Product #@item.ProductId</a>
+                                                <a href="javascript:void(0)">@title</a>
                                             </td>
                                             <td class="product-price">
-                                                <span class="amount">$@unitPrice.ToString("N0")</span>
+                                                <span class="amount js-unit-price" data-unit="@unitPrice">@($"${unitPrice:N0}")</span>
                                             </td>
                                             <td class="quantity">
-                                                <form asp-controller="Cart" asp-action="Update" method="post" class="cart-plus-minus d-inline-flex">
-                                                    <input type="hidden" name="productId" value="@item.ProductId" />
-                                                    <input class="cart-plus-minus-box" name="quantity" value="@qty" type="number" min="0" />
-                                                    <button type="submit" class="btn btn-sm btn-outline-secondary ms-2">Update</button>
-                                                </form>
+                                                <div class="cart-plus-minus d-inline-flex">
+                                                    <input class="cart-plus-minus-box js-qty" value="@qty" type="number" min="0" data-product-id="@item.ProductId" />
+                                                </div>
                                             </td>
                                             <td class="product-subtotal">
-                                                <span class="amount">$@lineTotal.ToString("N0")</span>
+                                                <span class="amount js-line-total">@($"${lineTotal:N0}")</span>
                                             </td>
                                         </tr>
                                     }
@@ -97,8 +102,8 @@
                             <div class="cart-page-total">
                                 <h2>Cart totals</h2>
                                 <ul>
-                                    <li>Subtotal <span>$@SubTotal().ToString("N0")</span></li>
-                                    <li>Total <span>$@((Model?.TotalAmount ?? (int)SubTotal()).ToString("N0"))</span></li>
+                                    <li>Subtotal <span id="cart-subtotal">$@SubTotal().ToString("N0")</span></li>
+                                    <li>Total <span id="cart-total">$@((Model?.TotalAmount ?? (int)SubTotal()).ToString("N0"))</span></li>
                                 </ul>
                                 <a asp-controller="VNplay"
                                    asp-action="CreatePaymentUrl"
@@ -110,19 +115,92 @@
                         </div>
                     </div>
 
+                    <form id="af-form" style="display:none" method="post">
+                        @Html.AntiForgeryToken()
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </main>
 <!-- Main Content Area End Here -->
+
+@section Scripts {
 <script>
-    function payNow() {
-        fetch('/Vnpay/Create?amount=100000&description=Thanh+toan+don+hang')
-            .then(res => res.text())
-            .then(url => {
-                window.location.href = url; // <-- chuyển hướng sang VNPAY
-            })
-            .catch(err => alert(err));
+    function money(n){ try { return '$' + (n ?? 0).toLocaleString(); } catch { return '$' + n; } }
+    function token(){ const el=document.querySelector('#af-form input[name="__RequestVerificationToken"]'); return el?el.value:''; }
+    async function postCart(url, payload) {
+        const body = new URLSearchParams({ __RequestVerificationToken: token(), ...payload });
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+            body
+        });
+        return await res.json().catch(() => ({}));
     }
+    function updateTotals(totalAmount) {
+        const total = document.getElementById('cart-total');
+        const sub = document.getElementById('cart-subtotal');
+        if (total) total.textContent = money(totalAmount ?? 0);
+        if (sub) sub.textContent = money(totalAmount ?? 0);
+    }
+    // Debounce helper
+    function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
+
+    async function sendUpdate(row, pid, qty){
+        const data = await postCart('@Url.Action("UpdateAjax","Cart")', { productId: pid, quantity: qty });
+        if (data && data.success){
+            const lineTotal = row.querySelector('.js-line-total');
+            if (lineTotal) lineTotal.textContent = money(data.lineTotal || 0);
+            updateTotals(data.totalAmount || 0);
+            document.dispatchEvent(new CustomEvent('cart:changed', { detail: data }));
+            if (qty <= 0) row.remove();
+        }
+    }
+
+    const debouncedUpdate = debounce(sendUpdate, 400);
+
+    document.getElementById('cart-table')?.addEventListener('input', e => {
+        const inp = e.target.closest('.js-qty');
+        if (!inp) return;
+        const row = inp.closest('tr');
+        const pid = inp.getAttribute('data-product-id');
+        const qty = parseInt(inp.value || '0', 10);
+        debouncedUpdate(row, pid, qty);
+    });
+
+    document.getElementById('cart-table')?.addEventListener('blur', e => {
+        const inp = e.target.closest('.js-qty');
+        if (!inp) return;
+        const row = inp.closest('tr');
+        const pid = inp.getAttribute('data-product-id');
+        const qty = parseInt(inp.value || '0', 10);
+        sendUpdate(row, pid, qty);
+    }, true);
+
+    document.getElementById('cart-table')?.addEventListener('keydown', e => {
+        if (e.key !== 'Enter') return;
+        const inp = e.target.closest('.js-qty');
+        if (!inp) return;
+        e.preventDefault();
+        const row = inp.closest('tr');
+        const pid = inp.getAttribute('data-product-id');
+        const qty = parseInt(inp.value || '0', 10);
+        sendUpdate(row, pid, qty);
+    });
+
+    document.addEventListener('click', async (e) => {
+        const btnR = e.target.closest('.js-remove');
+        if (btnR) {
+            const pid = btnR.getAttribute('data-product-id');
+            const row = btnR.closest('tr');
+            const data = await postCart('@Url.Action("RemoveAjax","Cart")', { productId: pid });
+            if (data && data.success) {
+                row.remove();
+                updateTotals(data.totalAmount || 0);
+                document.dispatchEvent(new CustomEvent('cart:changed', { detail: data }));
+            }
+        }
+    });
 </script>
+}

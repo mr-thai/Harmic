@@ -11,7 +11,6 @@ public class VnpayPayment
 
     public VnpayPayment()
     {
-        // Khởi tạo giá trị cho _tmnCode, _hashSecret, _baseUrl, _callbackUrl tại đây.
         _vnpay = new Vnpay();
         _vnpay.Initialize(_tmnCode, _hashSecret, _baseUrl, _callbackUrl);
     }

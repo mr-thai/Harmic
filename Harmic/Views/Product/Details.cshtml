@@ -95,7 +95,10 @@
                                                 </div>
                                             </li>
                                             <li class="add-to-cart">
-                                                <a class="btn btn-custom-size lg-size btn-primary btn-secondary-hover rounded-0" href="cart.html">Add to cart</a>
+                                                <a class="btn btn-custom-size lg-size btn-primary btn-secondary-hover rounded-0 js-add-cart"
+                                                   href="javascript:void(0)"
+                                                   data-add-cart
+                                                   data-product-id="@Model.ProductId">Add to cart</a>
                                             </li>
                                             <li class="wishlist-btn-wrap">
                                                 <a class="btn rounded-0" href="wishlist.html">
@@ -387,4 +390,3 @@
             </div>
         </main>
 <!-- Main Content Area End Here  -->
-        

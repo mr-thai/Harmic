@@ -14,9 +14,7 @@ namespace Harmic.Services
         {
             _db = db;
         }
-
-        // Build a small context string from SQL Server for RAG
-        public async Task<string> BuildContextAsync(string question, int limit = 5, CancellationToken ct = default)
+      public async Task<string> BuildContextAsync(string question, int limit = 5, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(question))
                 return string.Empty;
@@ -24,7 +22,6 @@ namespace Harmic.Services
             var q = question.ToLowerInvariant();
             var sb = new StringBuilder();
 
-            // Order lookup by code if user mentions order
             if (q.Contains("đơn hàng") || q.Contains("order") || q.Contains("mã đơn"))
             {
                 var code = ExtractOrderCode(question);
@@ -56,7 +53,7 @@ namespace Harmic.Services
                 }
             }
 
-            // Product lookup
+            // Product 
             if (q.Contains("sản phẩm") || q.Contains("product") || q.Contains("giá") || q.Contains("mua"))
             {
                 var products = await _db.TbProducts.AsNoTracking()
@@ -85,7 +82,7 @@ namespace Harmic.Services
                 }
             }
 
-            // Category lookup
+            // Category 
             if (q.Contains("danh mục") || q.Contains("category") || q.Contains("loại"))
             {
                 var cats = await _db.TbProductCategories.AsNoTracking()
@@ -106,7 +103,7 @@ namespace Harmic.Services
                 }
             }
 
-            // Blog/News (optional)
+            // Blog
             if (q.Contains("blog") || q.Contains("tin tức") || q.Contains("news"))
             {
                 var news = await _db.TbNews.AsNoTracking()
@@ -127,7 +124,6 @@ namespace Harmic.Services
                 }
             }
 
-            // Fallback: if nothing matched, return a tiny catalog snapshot to help the model answer
             if (sb.Length == 0)
             {
                 var topProducts = await _db.TbProducts.AsNoTracking()
@@ -157,7 +153,6 @@ namespace Harmic.Services
 
         private static string ExtractOrderCode(string text)
         {
-            // common pattern: 4-12 alphanumerics (tweak to your real codes)
             var m = Regex.Match(text, @"[A-Za-z0-9]{4,12}");
             return m.Success ? m.Value : string.Empty;
         }

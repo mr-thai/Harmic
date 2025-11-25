@@ -38,7 +38,6 @@ var apiKey = builder.Configuration["Gemini:ApiKey"]
              ?? string.Empty;
 builder.Services.AddSingleton(new GeminiService(apiKey));
 
-// RAG retrieval service
 builder.Services.AddScoped<ChatRetrievalService>();
 
 builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();

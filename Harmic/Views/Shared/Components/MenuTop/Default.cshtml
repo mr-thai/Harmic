@@ -1,6 +1,6 @@
 ﻿@model IEnumerable<Harmic.Models.TbMenu>
 
-@foreach (var item in Model.Where(i => i.Levels == 1))
+@foreach (var item in Model)
 {
 	<li class="drop-holder">
 		<a href="/@item.Alias">

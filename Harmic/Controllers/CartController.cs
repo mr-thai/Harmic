@@ -1,24 +1,63 @@
+﻿using Harmic.Models;
 using Harmic.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Harmic.Controllers
 {
     public class CartController : Controller
     {
         private readonly ICartService _cart;
+        private readonly HarmicContext _db;
 
-        public CartController(ICartService cart)
+        public CartController(ICartService cart, HarmicContext db)
         {
             _cart = cart;
+            _db = db;
         }
 
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var cart = await _cart.GetOrCreateCartAsync();
-            return View(cart);
+            // Hiển thị tất cả đơn hàng có trạng thái = 1, không ràng buộc AccountId
+            const int activeStatusId = 1;
+            var orders = await _db.TbOrders
+                .Include(o => o.TbOrderDetails)
+                .Where(o => o.OrderStatusId == activeStatusId)
+                .ToListAsync();
+
+            var aggregatedDetails = new List<TbOrderDetail>();
+            foreach (var o in orders)
+            {
+                aggregatedDetails.AddRange(o.TbOrderDetails);
+            }
+
+            var productIds = aggregatedDetails
+                .Where(d => d.ProductId.HasValue)
+                .Select(d => d.ProductId!.Value)
+                .Distinct()
+                .ToList();
+
+            var productMap = await _db.TbProducts
+                .Where(p => productIds.Contains(p.ProductId))
+                .ToDictionaryAsync(p => p.ProductId);
+
+            var totalAmount = (int)aggregatedDetails.Sum(d => (d.Price ?? 0m) * (d.Quantity ?? 0));
+            var totalQty = aggregatedDetails.Sum(d => d.Quantity ?? 0);
+
+            // Tạo model TbOrder "tổng hợp" để tái sử dụng view hiện tại
+            var model = new TbOrder
+            {
+                TbOrderDetails = aggregatedDetails,
+                TotalAmount = totalAmount,
+                Quanlity = totalQty
+            };
+
+            ViewBag.ProductMap = productMap;
+            return View(model);
         }
 
         [HttpPost]
@@ -98,6 +137,47 @@ namespace Harmic.Controllers
         {
             var count = await _cart.GetItemCountAsync();
             return Json(new { itemCount = count });
+        }
+
+        // MiniCart dữ liệu cho header (realtime)
+        [HttpGet]
+        public async Task<IActionResult> MiniCart()
+        {
+            var cart = await _cart.GetCartAsync() ?? await _cart.GetOrCreateCartAsync();
+            // Giữ nguyên logic hiện tại để tránh lẫn dữ liệu người khác
+            var ids = cart.TbOrderDetails
+                .Where(d => d.ProductId.HasValue)
+                .Select(d => d.ProductId!.Value)
+                .Distinct()
+                .ToList();
+
+            var products = await _db.TbProducts
+                .Where(p => ids.Contains(p.ProductId))
+                .ToDictionaryAsync(p => p.ProductId);
+
+            var items = cart.TbOrderDetails.Select(d =>
+            {
+                var pid = d.ProductId ?? 0;
+                products.TryGetValue(pid, out var p);
+                var price = (int)(d.Price ?? 0m);
+                var qty = d.Quantity ?? 0;
+                var lineTotal = price * qty;
+
+                return new
+                {
+                    productId = pid,
+                    title = p?.Title ?? $"Product #{pid}",
+                    imageUrl = Url.Content("~/" + (string.IsNullOrWhiteSpace(p?.Image) ? "assets/images/product/small-size/1-1-112x124.jpg" : p!.Image)),
+                    price,
+                    quantity = qty,
+                    lineTotal
+                };
+            }).ToList();
+
+            var subtotal = items.Sum(i => i.lineTotal);
+            var itemCount = items.Sum(i => i.quantity);
+
+            return Json(new { itemCount, subtotal, items });
         }
     }
 }

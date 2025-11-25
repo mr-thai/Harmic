@@ -26,26 +26,41 @@ namespace Harmic.Controllers
                 if (req == null || string.IsNullOrWhiteSpace(req.Prompt))
                     return BadRequest(new { error = "Prompt is required." });
 
-                // 1) Pull relevant facts from SQL Server
                 var facts = await _retrieval.BuildContextAsync(req.Prompt, ct: ct);
 
-                // 2) Compose prompt (avoid replies like “không có quyền truy cập”)
-                var prompt = string.IsNullOrWhiteSpace(facts)
-                    ? "Bạn là trợ lý cửa hàng. Hãy hỏi lại người dùng những thông tin cần thiết " +
-                      "(ví dụ: mã đơn hàng, tên sản phẩm, mức giá mong muốn, danh mục) để tra cứu. " +
-                      "Tuyệt đối không nói rằng bạn không có quyền truy cập dữ liệu. " +
-                      $"Câu hỏi của người dùng: {req.Prompt}"
-                    : "Bạn là trợ lý cửa hàng. Chỉ sử dụng dữ liệu FACTS bên dưới để trả lời ngắn gọn bằng tiếng Việt. " +
-                      "Nếu FACTS chưa đủ, hãy hỏi người dùng thông tin còn thiếu (không nói rằng bạn không có quyền truy cập). " +
-                      $"{facts}\nCâu hỏi của người dùng: " + req.Prompt;
+                // New rewritten prompt
+                var prompt = @$"
+Bạn là trợ lý cửa hàng trực tuyến và là một trợ lý cuộc sống . Nguyên tắc:
+1. Trả lời dài dòng giới thiệu chi tiết sản phẩm bằng tiếng Việt, ưu tiên gạch đầu dòng.
+2. Chỉ dùng FACTS nếu có; không phỏng đoán sai.
+3. Nếu thiếu dữ liệu yêu cầu: hỏi lại thông tin cụ thể (mã đơn hàng, tên sản phẩm, khoảng giá…).
+4. Không nói về hệ thống nội bộ hay quyền truy cập.
+5. Không bịa số liệu giá / tồn kho khi FACTS không chứa.
+6. nếu là câu hỏi về cuộc sống hãy trả lời nhẹ nhàng và dòng cuối cùng hãy giưới thiệu sản phẩm
 
-                // 3) Call LLM
+FACTS (có thể trống):
+{(string.IsNullOrWhiteSpace(facts) ? "(Không có dữ liệu liên quan.)" : facts)}
+
+CÂU HỎI NGƯỜI DÙNG:
+{req.Prompt}
+
+YÊU CẦU ĐẦU RA:
+- có thể trả lời các câu hỏi không liên quan dến trang web
+- Nếu FACTS đủ: trả lời trực tiếp.
+- Nếu FACTS chưa đủ: liệt kê rõ các thông tin cần bổ sung.
+- Không thêm lời chào cuối rườm rà.
+";
+
                 var answer = await _gemini.GenerateAsync(prompt);
-                return Ok(new { response = string.IsNullOrWhiteSpace(answer) ? "Mình cần thêm thông tin để hỗ trợ bạn tốt hơn." : answer });
+                return Ok(new
+                {
+                    response = string.IsNullOrWhiteSpace(answer)
+                        ? "Mình cần thêm thông tin (ví dụ: mã đơn hàng hoặc tên sản phẩm) để hỗ trợ bạn tốt hơn."
+                        : answer.Trim()
+                });
             }
             catch (Exception ex)
             {
-                // Always return JSON so client parsing won't crash
                 return StatusCode(500, new { error = "Server error.", detail = ex.Message });
             }
         }

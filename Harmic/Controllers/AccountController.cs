@@ -30,7 +30,7 @@ namespace Harmic.Controllers
             {
                 if (account == null || string.IsNullOrWhiteSpace(account.Email) || string.IsNullOrWhiteSpace(account.Password))
                 {
-                    ViewBag.Message = "Vui lòng nhập email và mật khẩu.";
+                    ViewBag.Message = "nhap.";
                     return View(account);
                 }
 
@@ -39,39 +39,50 @@ namespace Harmic.Controllers
 
                 if (user == null)
                 {
-                    ViewBag.Message = "Sai email hoặc mật khẩu.";
+                    ViewBag.Message = "Sai";
                     return View(account);
                 }
 
                 Function._AccountId = user.AccountId;
-                Function._Username = user.Username ?? string.Empty;
-                Function._Message = user.Email ?? string.Empty;
-                HttpContext.Session.SetInt32("RoleId", user.RoleId ?? 0);
-
-                // Merge any session cart into this user cart
+                Function._Username = user.Username;
+                Function._Message = user.Email;
+                var roleId = user.RoleId ?? 2;
+                HttpContext.Session.SetInt32("RoleId", roleId);
                 _cartService.MergeSessionCartToUserAsync(user.AccountId).GetAwaiter().GetResult();
 
-                if (user.RoleId == 1)
+                switch (roleId)
                 {
-                    return RedirectToAction("Index", "Home");
-                }
-                else
-                {
-                    return RedirectToAction("Index", "Home");
+                    case 1:
+                        HttpContext.Session.SetString("AdminShowSidebar", "true");
+                        return RedirectToAction("Index", "Home", new { area = "Admin" });
+
+                    case 2:
+                        return RedirectToAction("Index", "Home");
+
+                    case 1002:
+                        HttpContext.Session.SetString("AdminShowSidebar", "false");
+                        return RedirectToAction("Index", "Menus", new { area = "Admin" });
+
+                    case 1003:
+                        HttpContext.Session.SetString("AdminShowSidebar", "false");
+                        return RedirectToAction("Index", "Products", new { area = "Admin" });
+
+                    default:
+                        return RedirectToAction("Index", "Home");
                 }
             }
             else if (action == "register")
             {
                 if (account == null || string.IsNullOrWhiteSpace(account.Email) || string.IsNullOrWhiteSpace(account.Password) || string.IsNullOrWhiteSpace(account.Username))
                 {
-                    ViewBag.Message = "Vui lòng nhập đầy đủ thông tin.";
+                    ViewBag.Message = "nhap";
                     return View(account);
                 }
 
                 var user = _context.TbAccounts.FirstOrDefault(n => n.Email == account.Email);
                 if (user != null)
                 {
-                    ViewBag.Message = "Email đã tồn tại.";
+                    ViewBag.Message = "co roi";
                     return View(account);
                 }
 
@@ -81,7 +92,7 @@ namespace Harmic.Controllers
                 account.FullName = account.Username;
                 _context.TbAccounts.Add(account);
                 _context.SaveChanges();
-                ViewBag.Message = "Đăng ký thành công.";
+                ViewBag.Message = "ok";
                 return View();
             }
 
